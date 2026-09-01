@@ -32,7 +32,8 @@
     font-family:'Inter', sans-serif;
     min-height:100vh;
     display:flex;
-    justify-content:center;
+    flex-direction:column;
+    align-items:center;
     padding:48px 20px;
   }
   .wrap{ width:100%; max-width:640px; }
@@ -482,11 +483,12 @@
     font-size:13px;
     color:var(--muted);
     line-height:1.7;
-    /* Full-bleed: the last section on the page, scrolling normally with
-       everything else, but reaching the true viewport edges instead of
-       staying inside .wrap's centered 640px column. left:50% combined
-       with translateX(-50%) escapes that column without the box-model
-       conflict a width+both-margins version would hit. */
+    /* Full-bleed: reaches the true viewport edges instead of staying
+       inside a centered column. left:50% + translateX(-50%) escapes
+       body's own padding without the box-model conflict a plain
+       width+both-margins version would hit — this works here because
+       .formula is now a direct child of body (a sibling of .wrap), not
+       nested inside .wrap's own 640px-wide column. */
     width:100vw;
     max-width:none;
     position:relative;
@@ -495,6 +497,13 @@
     border-radius:0;
     border-left:none;
     border-right:none;
+    /* Sticky footer: on a short page, this eats the leftover space in
+       body's min-height:100vh flex column and gets pushed down flush
+       with the bottom of the screen. On a page tall enough to need
+       scrolling, there's no leftover space to eat, so it just sits
+       normally right after the rest of the content — never fixed,
+       never overlapping anything above it. */
+    margin-top:auto;
   }
   .formula strong{ color:var(--text); }
   .formula code{
@@ -626,15 +635,15 @@
     </div>
   </div>
 
-  <div class="slab formula">
-    <strong style="color:var(--text); font-family:'Rajdhani',sans-serif; font-size:16px;">The formula</strong>
-    <p style="margin-top:10px;">
-      Raw Profit: <code>RP = 0.8x</code><br>
-      Grading Profit: <code>GP = 0.8y − 150</code><br>
-      Grade the card only if <code>GP &gt; RP</code>, which simplifies to <code>y − x &gt; 187.50</code>.
-    </p>
-  </div>
+</div>
 
+<div class="slab formula">
+  <strong style="color:var(--text); font-family:'Rajdhani',sans-serif; font-size:16px;">The formula</strong>
+  <p style="margin-top:10px;">
+    Raw Profit: <code>RP = 0.8x</code><br>
+    Grading Profit: <code>GP = 0.8y − 150</code><br>
+    Grade the card only if <code>GP &gt; RP</code>, which simplifies to <code>y − x &gt; 187.50</code>.
+  </p>
 </div>
 
 <div class="lightbox" id="lightbox">
