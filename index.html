@@ -220,6 +220,7 @@
     padding:12px 14px;
     display:flex;
     gap:12px;
+    cursor:pointer;
   }
   .result-card .thumb{
     width:100px;
@@ -229,6 +230,30 @@
     background:var(--panel);
     border:1px solid var(--line);
     object-fit:cover;
+  }
+  .result-card .thumb.clickable{
+    cursor:zoom-in;
+    transition:opacity .15s ease;
+  }
+  .result-card .thumb.clickable:hover{ opacity:.8; }
+
+  .lightbox{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(10,10,14,.88);
+    z-index:100;
+    align-items:center;
+    justify-content:center;
+    padding:32px;
+    cursor:zoom-out;
+  }
+  .lightbox.open{ display:flex; }
+  .lightbox img{
+    max-width:min(90vw, 520px);
+    max-height:90vh;
+    border-radius:12px;
+    box-shadow:0 24px 64px rgba(0,0,0,.55);
   }
   .result-card .thumb.empty{
     display:flex;
@@ -320,6 +345,15 @@
     gap:16px;
   }
   @media (max-width:520px){ .fields{grid-template-columns:1fr;} }
+
+  @media (max-width:480px){
+    /* Side-by-side leaves almost no room for condition buttons on a
+       phone width, forcing awkward mid-word wraps. Stacking the image
+       above the info gives the button list the card's full width. */
+    .result-card{ flex-direction:column; }
+    .result-card .thumb{ width:90px; height:126px; }
+    .variant-btn{ flex:1 1 100%; }
+  }
 
   label{
     display:block;
@@ -627,6 +661,10 @@
 
 </div>
 
+<div class="lightbox" id="lightbox">
+  <img id="lightbox-img" alt="">
+</div>
+
 <script>
   const xInput = document.getElementById('x');
   const yInput = document.getElementById('y');
@@ -797,9 +835,27 @@
   // extra network round trip, and no more English-only gap. This
   // replaced an entire retry/queue/cache system that existed only to
   // work around the old (English-only, rate-limited) image source.
-  function tcgplayerImageUrl(tcgplayerId){
-    return tcgplayerId ? `https://tcgplayer-cdn.tcgplayer.com/product/${tcgplayerId}_in_200x200.jpg` : null;
+  function tcgplayerImageUrl(tcgplayerId, size){
+    return tcgplayerId ? `https://tcgplayer-cdn.tcgplayer.com/product/${tcgplayerId}_in_${size || '200x200'}.jpg` : null;
   }
+
+  // ---- Full-size image viewer (results only, not the suggestions dropdown) ----
+  const lightboxEl = document.getElementById('lightbox');
+  const lightboxImgEl = document.getElementById('lightbox-img');
+
+  function openLightbox(src, alt){
+    lightboxImgEl.src = src;
+    lightboxImgEl.alt = alt || '';
+    lightboxEl.classList.add('open');
+  }
+  function closeLightbox(){
+    lightboxEl.classList.remove('open');
+    lightboxImgEl.src = '';
+  }
+  lightboxEl.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
 
   // Extracts a plain number from strings like "9/18", "SWSH144", "041/146"
   function extractNumber(str){
@@ -838,6 +894,13 @@
   let debounceTimer = null;
   let latestSuggestionRequest = 0;
 
+  // Remembers results per exact term for this session — retyping something
+  // you already searched (very common when backspacing to fix a typo)
+  // renders instantly with no network round trip at all. This is on top
+  // of the server's own edge cache, which only helps once a term has been
+  // looked up by anyone, ever; this one helps on the very first lookup.
+  const suggestionCache = new Map();
+
   function debounceSuggest(){
     clearTimeout(debounceTimer);
     // Japanese suggestions need the backend (they're sourced from JustTCG,
@@ -852,7 +915,13 @@
       closeSuggestions();
       return;
     }
-    debounceTimer = setTimeout(() => fetchSuggestions(term), 300);
+    const cacheKey = `${searchLanguage}:${term.toLowerCase()}`;
+    if (suggestionCache.has(cacheKey)){
+      ++latestSuggestionRequest; // supersede any still-in-flight request
+      renderSuggestions(suggestionCache.get(cacheKey));
+      return;
+    }
+    debounceTimer = setTimeout(() => fetchSuggestions(term, cacheKey), 150);
   }
 
   function closeSuggestions(){
@@ -860,7 +929,7 @@
     suggestionsEl.innerHTML = '';
   }
 
-  async function fetchSuggestions(term){
+  async function fetchSuggestions(term, cacheKey){
     const requestId = ++latestSuggestionRequest;
     try{
       let url;
@@ -877,6 +946,7 @@
       if (requestId !== latestSuggestionRequest) return; // a newer keystroke has already fired
       if (!res.ok) { closeSuggestions(); return; }
       const data = await res.json();
+      suggestionCache.set(cacheKey, data.data || []);
       renderSuggestions(data.data || []);
     } catch(err){
       if (requestId === latestSuggestionRequest) closeSuggestions();
@@ -1019,18 +1089,34 @@
       });
       resultsEl.appendChild(resultsBackBtn);
 
+      // Hides every other card, leaving just this one. Clicking anywhere
+      // in a card (its image, name, or a specific condition) calls this;
+      // it's idempotent, so it's safe to fire redundantly alongside a
+      // condition button's own click handling.
+      function isolateCard(div){
+        allResultCards.forEach(otherDiv => {
+          if (otherDiv !== div) otherDiv.style.display = 'none';
+        });
+        resultsBackBtn.style.display = 'inline-block';
+      }
+
       cards.forEach((card, idx) => {
         const div = document.createElement('div');
         div.className = 'result-card';
+        div.addEventListener('click', () => isolateCard(div));
         allResultCards.push(div);
 
         let thumb;
         const imgUrl = tcgplayerImageUrl(card.tcgplayerId);
         if (imgUrl){
           thumb = document.createElement('img');
-          thumb.className = 'thumb';
+          thumb.className = 'thumb clickable';
           thumb.src = imgUrl;
           thumb.alt = card.name || '';
+          thumb.title = 'Click to view larger';
+          thumb.addEventListener('click', () => {
+            openLightbox(tcgplayerImageUrl(card.tcgplayerId, '800x800'), card.name);
+          });
           thumb.onerror = () => {
             const fallback = document.createElement('div');
             fallback.className = 'thumb empty';
@@ -1084,10 +1170,7 @@
             btn.classList.add('selected');
 
             // Hide every other card in the results list.
-            allResultCards.forEach(otherDiv => {
-              if (otherDiv !== div) otherDiv.style.display = 'none';
-            });
-            resultsBackBtn.style.display = 'inline-block';
+            isolateCard(div);
 
             // Look up graded sale prices for this card (if enabled) and
             // fill in the graded price field once they're back.
