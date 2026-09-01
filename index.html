@@ -482,6 +482,17 @@
     font-size:13px;
     color:var(--muted);
     line-height:1.7;
+    /* Full-bleed: escape .wrap's max-width and body's side padding to
+       reach the true viewport edges. left:50% + translateX(-50%) avoids
+       the box-model conflict a width+both-margins version would hit. */
+    width:100vw;
+    max-width:none;
+    position:relative;
+    left:50%;
+    transform:translateX(-50%);
+    border-radius:0;
+    border-left:none;
+    border-right:none;
   }
   .formula strong{ color:var(--text); }
   .formula code{
@@ -492,22 +503,6 @@
     color:var(--text);
   }
 
-  .setup-box{
-    border:1px dashed var(--line);
-    border-radius:10px;
-    padding:14px 16px;
-    font-size:13px;
-    color:var(--muted);
-    line-height:1.6;
-    margin-top:14px;
-  }
-  .setup-box code{
-    font-family:'JetBrains Mono',monospace;
-    background:var(--panel-2);
-    padding:2px 6px;
-    border-radius:5px;
-    color:var(--text);
-  }
 </style>
 </head>
 <body>
@@ -577,7 +572,7 @@
     <script>const USE_BACKEND = true;</script>
   </div>
 
-  <div class="slab">
+  <div class="slab" id="run-the-numbers" style="display:none;">
     <h2>2. Run the numbers</h2>
     <div class="fields">
       <div>
@@ -636,27 +631,6 @@
       Grading Profit: <code>GP = 0.8y − 150</code><br>
       Grade the card only if <code>GP &gt; RP</code>, which simplifies to <code>y − x &gt; 187.50</code>.
     </p>
-    <div class="setup-box">
-      <strong style="color:var(--text)">First time using this?</strong><br>
-      1. Get a free API key at <code>justtcg.com/auth/signup</code> (no credit card needed).<br>
-      2. Open this file in a text editor, find the line that says
-      <code>PASTE_YOUR_API_KEY_HERE</code>, and put your key between the quotes.<br>
-      3. Save the file and reopen it in your browser. Search should now work.<br><br>
-      <strong style="color:var(--text)">Want the graded price to auto-fill too?</strong><br>
-      Get a second free key (no credit card) at
-      <code>pokemonpricetracker.com/api</code>, then paste it into the
-      other <code>PASTE_YOUR_API_KEY_HERE</code> spot in this file, next to
-      <code>PPT_API_KEY</code>. Without it, everything still works — you'll
-      just keep entering the graded price yourself.<br><br>
-      <strong style="color:var(--text)">Want it faster, with real graded-price auto-fill?</strong><br>
-      This page came with a small <code>backend</code> folder (a few
-      files that live on a free server instead of your computer). Deploy
-      it to Vercel, put your two API keys in Vercel's Environment
-      Variables settings instead of in this file, then set
-      <code>USE_BACKEND</code> to <code>true</code> near the
-      <code>PPT_API_KEY</code> line and view this page through your
-      live Vercel URL. See the setup guide for the exact steps.
-    </div>
   </div>
 
 </div>
@@ -666,6 +640,7 @@
 </div>
 
 <script>
+  const runTheNumbersEl = document.getElementById('run-the-numbers');
   const xInput = document.getElementById('x');
   const yInput = document.getElementById('y');
   const xRow = document.getElementById('x-row');
@@ -1113,6 +1088,7 @@
           if (otherDiv !== div) otherDiv.style.display = 'none';
         });
         resultsBackBtn.style.display = 'inline-block';
+        runTheNumbersEl.style.display = '';
       }
 
       cards.forEach((card, idx) => {
