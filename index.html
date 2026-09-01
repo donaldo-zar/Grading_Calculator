@@ -483,17 +483,19 @@
     font-size:13px;
     color:var(--muted);
     line-height:1.7;
-    /* Full-bleed: reaches the true viewport edges instead of staying
-       inside a centered column. left:50% + translateX(-50%) escapes
-       body's own padding without the box-model conflict a plain
-       width+both-margins version would hit — this works here because
-       .formula is now a direct child of body (a sibling of .wrap), not
-       nested inside .wrap's own 640px-wide column. */
-    width:100vw;
-    max-width:none;
-    position:relative;
-    left:50%;
-    transform:translateX(-50%);
+    /* Full-bleed: reaches the true edges of body's own box instead of
+       staying inside a centered column. align-self:stretch fills
+       body's available cross-axis width (body is a flex column), then
+       negative margins matching body's own 20px side padding expand
+       this out to body's true edges. Deliberately avoids 100vw/left:50%
+       — that combination measures against the viewport including the
+       scrollbar's width in some browsers, which doesn't quite match
+       window's actual content width and left this a few pixels
+       off-center. Plain pixel margins matching a known, fixed padding
+       value can't have that problem. */
+    align-self:stretch;
+    margin-left:-20px;
+    margin-right:-20px;
     border-radius:0;
     border-left:none;
     border-right:none;
