@@ -33,7 +33,7 @@
     min-height:100vh;
     display:flex;
     justify-content:center;
-    padding:48px 20px 190px;
+    padding:48px 20px;
   }
   .wrap{ width:100%; max-width:640px; }
 
@@ -353,10 +353,6 @@
     .result-card{ flex-direction:column; }
     .result-card .thumb{ width:90px; height:126px; }
     .variant-btn{ flex:1 1 100%; }
-    /* The fixed formula bar at the bottom wraps onto more lines (and
-       gets taller) at narrow widths, so it needs more reserved space
-       below the page content to avoid covering the last section. */
-    body{ padding-bottom:260px; }
   }
 
   label{
@@ -486,24 +482,19 @@
     font-size:13px;
     color:var(--muted);
     line-height:1.7;
-    /* Pinned to the bottom of the viewport (not just the bottom of the
-       page content) — position:fixed measures left/right/bottom from
-       the viewport itself, so this reaches the true screen edges
-       without needing the max-width escape trick a normal-flow
-       full-bleed section would require. */
-    position:fixed;
-    left:0;
-    right:0;
-    bottom:0;
-    width:100%;
+    /* Full-bleed: the last section on the page, scrolling normally with
+       everything else, but reaching the true viewport edges instead of
+       staying inside .wrap's centered 640px column. left:50% combined
+       with translateX(-50%) escapes that column without the box-model
+       conflict a width+both-margins version would hit. */
+    width:100vw;
     max-width:none;
-    margin:0;
+    position:relative;
+    left:50%;
+    transform:translateX(-50%);
     border-radius:0;
     border-left:none;
     border-right:none;
-    border-bottom:none;
-    box-shadow:0 -8px 24px rgba(0,0,0,.35);
-    z-index:50;
   }
   .formula strong{ color:var(--text); }
   .formula code{
