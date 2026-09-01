@@ -33,7 +33,7 @@
     min-height:100vh;
     display:flex;
     justify-content:center;
-    padding:48px 20px;
+    padding:48px 20px 190px;
   }
   .wrap{ width:100%; max-width:640px; }
 
@@ -353,6 +353,10 @@
     .result-card{ flex-direction:column; }
     .result-card .thumb{ width:90px; height:126px; }
     .variant-btn{ flex:1 1 100%; }
+    /* The fixed formula bar at the bottom wraps onto more lines (and
+       gets taller) at narrow widths, so it needs more reserved space
+       below the page content to avoid covering the last section. */
+    body{ padding-bottom:260px; }
   }
 
   label{
@@ -482,17 +486,24 @@
     font-size:13px;
     color:var(--muted);
     line-height:1.7;
-    /* Full-bleed: escape .wrap's max-width and body's side padding to
-       reach the true viewport edges. left:50% + translateX(-50%) avoids
-       the box-model conflict a width+both-margins version would hit. */
-    width:100vw;
+    /* Pinned to the bottom of the viewport (not just the bottom of the
+       page content) — position:fixed measures left/right/bottom from
+       the viewport itself, so this reaches the true screen edges
+       without needing the max-width escape trick a normal-flow
+       full-bleed section would require. */
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    width:100%;
     max-width:none;
-    position:relative;
-    left:50%;
-    transform:translateX(-50%);
+    margin:0;
     border-radius:0;
     border-left:none;
     border-right:none;
+    border-bottom:none;
+    box-shadow:0 -8px 24px rgba(0,0,0,.35);
+    z-index:50;
   }
   .formula strong{ color:var(--text); }
   .formula code{
@@ -510,11 +521,11 @@
 
   <div class="eyebrow">Grading Decision Tool</div>
   <h1>Grade it, or sell it raw?</h1>
-  <p class="sub">Search for a card to auto-fill its raw price. The graded price can auto-fill too (from real recent eBay sales) if you add a free PokemonPriceTracker key below — otherwise just enter your own estimate. The math accounts for the ~80% you actually net on a sale and the $150 grading fee.</p>
+  <p class="sub">Search for a card to auto-fill its raw price. The graded price can auto-fill too, pulled from that card's real recent eBay sales — otherwise just enter your own estimate. The math accounts for the ~80% you actually net on a sale and the $150 grading fee.</p>
 
   <div class="slab">
     <h2>1. Look up a card</h2>
-    <p class="note">Search pulls live raw card prices from JustTCG. Graded prices, if you've added a free PokemonPriceTracker key, come from that card's recent eBay sales at your chosen grade — otherwise you'll enter that number yourself below.</p>
+    <p class="note">Search pulls live raw card prices from JustTCG. Graded prices come from that card's recent eBay sales, via PokemonPriceTracker, at your chosen grade — or enter your own estimate below.</p>
     <div class="lang-toggle" id="lang-toggle">
       <button type="button" class="lang-btn active" data-lang="english">English</button>
       <button type="button" class="lang-btn" data-lang="japanese">Japanese</button>
@@ -572,7 +583,7 @@
     <script>const USE_BACKEND = true;</script>
   </div>
 
-  <div class="slab" id="run-the-numbers" style="display:none;">
+  <div class="slab" id="run-the-numbers">
     <h2>2. Run the numbers</h2>
     <div class="fields">
       <div>
@@ -640,7 +651,6 @@
 </div>
 
 <script>
-  const runTheNumbersEl = document.getElementById('run-the-numbers');
   const xInput = document.getElementById('x');
   const yInput = document.getElementById('y');
   const xRow = document.getElementById('x-row');
@@ -740,13 +750,13 @@
     if (currentGradedSales.status === 'no-key'){
       gradeStatusEl.className = 'grade-status';
       gradeStatusEl.textContent = USE_BACKEND
-        ? 'Add PPT_API_KEY to your Vercel project\'s environment variables to enable this.'
+        ? 'Graded-price data isn\'t configured on the server yet.'
         : '';
       return;
     }
     if (currentGradedSales.status === 'error'){
       gradeStatusEl.className = 'grade-status';
-      gradeStatusEl.textContent = 'Graded price lookup failed — double check your PokemonPriceTracker key.';
+      gradeStatusEl.textContent = 'Graded price lookup failed — double check your PokemonPriceTracker setup.';
       return;
     }
     const entry = (currentGradedSales.salesByGrade || {})[gradeKey()];
@@ -1008,7 +1018,7 @@
 
     if (!USE_BACKEND && (!JUSTTCG_API_KEY || JUSTTCG_API_KEY === 'PASTE_YOUR_API_KEY_HERE')){
       statusEl.className = 'search-status error';
-      statusEl.textContent = "No API key set yet — see the setup box below to add your free JustTCG key.";
+      statusEl.textContent = "JustTCG search isn't set up yet — see this file's JustTCG setup notes.";
       return;
     }
 
@@ -1028,7 +1038,7 @@
       }
 
       if (!res.ok){
-        throw new Error(`Request failed (status ${res.status}). ${USE_BACKEND ? 'Check your server\'s JUSTTCG_API_KEY environment variable.' : 'Double-check your API key.'}`);
+        throw new Error(`Request failed (status ${res.status}). ${USE_BACKEND ? 'Check your server\'s JustTCG configuration.' : 'Double-check your JustTCG setup.'}`);
       }
 
       const data = await res.json();
@@ -1088,7 +1098,6 @@
           if (otherDiv !== div) otherDiv.style.display = 'none';
         });
         resultsBackBtn.style.display = 'inline-block';
-        runTheNumbersEl.style.display = '';
       }
 
       cards.forEach((card, idx) => {
