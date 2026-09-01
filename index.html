@@ -929,8 +929,22 @@
     suggestionsEl.innerHTML = '';
   }
 
+  function showSuggestionsLoading(){
+    // A fresh (uncached) lookup can take a little while — visibly showing
+    // that something is happening beats the dropdown silently doing
+    // nothing until it's ready, which read as broken.
+    suggestionsEl.innerHTML = '';
+    suggestionsEl.scrollTop = 0;
+    const loading = document.createElement('div');
+    loading.className = 'suggestion-empty';
+    loading.textContent = 'Searching…';
+    suggestionsEl.appendChild(loading);
+    suggestionsEl.classList.add('open');
+  }
+
   async function fetchSuggestions(term, cacheKey){
     const requestId = ++latestSuggestionRequest;
+    showSuggestionsLoading();
     try{
       let url;
       if (USE_BACKEND){
@@ -955,6 +969,7 @@
 
   function renderSuggestions(cards){
     suggestionsEl.innerHTML = '';
+    suggestionsEl.scrollTop = 0; // always start scrolled to the top for a new search
     if (cards.length === 0){
       const empty = document.createElement('div');
       empty.className = 'suggestion-empty';
