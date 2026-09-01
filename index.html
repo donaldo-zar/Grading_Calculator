@@ -182,8 +182,8 @@
   .suggestion-item:last-child{ border-bottom:none; }
   .suggestion-item:hover{ background:var(--panel); }
   .suggestion-item img{
-    width:56px;
-    height:78px;
+    width:112px;
+    height:156px;
     object-fit:cover;
     border-radius:4px;
     flex:none;
@@ -1114,7 +1114,13 @@
           thumb.src = imgUrl;
           thumb.alt = card.name || '';
           thumb.title = 'Click to view larger';
-          thumb.addEventListener('click', () => {
+          thumb.addEventListener('click', (e) => {
+            // Viewing the image is separate from selecting the card —
+            // stop this from bubbling to the card's own click handler,
+            // so opening/closing the viewer never changes what's
+            // selected. Whatever was selected before stays selected
+            // (or not) after.
+            e.stopPropagation();
             openLightbox(tcgplayerImageUrl(card.tcgplayerId, '800x800'), card.name);
           });
           thumb.onerror = () => {
