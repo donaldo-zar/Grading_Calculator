@@ -11,7 +11,8 @@ export default async function handler(req, res) {
   const key = process.env.PPT_API_KEY;
   if (!key) return res.status(200).json({ status: 'no-key' });
 
-  const url = `https://www.pokemonpricetracker.com/api/v2/cards?search=${encodeURIComponent(name)}&includeEbay=true&limit=1`;
+  const language = req.query.language === 'japanese' ? 'japanese' : 'english';
+  const url = `https://www.pokemonpricetracker.com/api/v2/cards?search=${encodeURIComponent(name)}&includeEbay=true&limit=1&language=${language}`;
 
   try {
     const apiRes = await fetch(url, { headers: { 'Authorization': `Bearer ${key}` } });

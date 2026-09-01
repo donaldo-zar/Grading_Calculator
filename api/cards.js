@@ -9,7 +9,9 @@ export default async function handler(req, res) {
   const key = process.env.JUSTTCG_API_KEY;
   if (!key) return res.status(500).json({ error: 'Server is missing the JUSTTCG_API_KEY environment variable' });
 
-  const url = `https://api.justtcg.com/v1/cards?q=${encodeURIComponent(q)}&game=pokemon&limit=8`;
+  // Only these two are ever sent by the page's language toggle.
+  const game = req.query.game === 'pokemon-japan' ? 'pokemon-japan' : 'pokemon';
+  const url = `https://api.justtcg.com/v1/cards?q=${encodeURIComponent(q)}&game=${game}&limit=8`;
 
   try {
     const apiRes = await fetch(url, { headers: { 'x-api-key': key } });
