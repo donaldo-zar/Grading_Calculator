@@ -531,8 +531,8 @@
          Vercel and are viewing THIS page through its live Vercel URL
          (something like your-project.vercel.app) rather than opening
          it as a local file. When true, the page asks your own server
-         for card data/images/prices instead of asking JustTCG,
-         PokemonPriceTracker and the card-image service directly —
+         for card data/prices instead of asking JustTCG,
+         PokemonPriceTracker and the suggestion service directly —
          your server then caches the answers so repeat lookups are
          instant, and the API keys above are no longer needed here at
          all (they live on the server instead, as environment
@@ -790,63 +790,15 @@
   yInput.addEventListener('input', calculate);
   calculate();
 
-  // ---- Card images (Pokemon TCG API — free, no key needed) ----
-  // A tiny queue that fetches images one at a time with a gap between
-  // requests, instead of firing them all at once. Anonymous (no API key)
-  // requests to this API are rate-limited quite aggressively in practice
-  // — even a single request repeated back-to-back can 500 on the second
-  // try — so this spaces requests out and retries with backoff instead
-  // of giving up after one retry.
-  let imageQueue = Promise.resolve();
-  function queueImageFetch(fn){
-    const run = () => fn().finally(() => new Promise(r => setTimeout(r, 400)));
-    imageQueue = imageQueue.then(run, run);
-    return imageQueue;
-  }
-
-  // Multiple result rows are often just different printings of the same
-  // card name (e.g. 8 "Charizard" variants), which would otherwise fire
-  // identical requests and burn through the rate limit for no reason.
-  const imageCache = new Map();
-
-  async function fetchCardImageOnce(cardName){
-    if (USE_BACKEND){
-      const res = await fetch(`/api/card-image?name=${encodeURIComponent(cardName)}`);
-      if (!res.ok) throw new Error('bad status ' + res.status);
-      const data = await res.json();
-      return data.image || null;
-    }
-    const q = `name:"${cardName}"`;
-    const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=1`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('bad status ' + res.status);
-    const data = await res.json();
-    const first = (data.data || [])[0];
-    return first?.images?.small || null;
-  }
-
-  async function fetchCardImageUncached(cardName){
-    return queueImageFetch(async () => {
-      const delays = [0, 400, 900]; // increasing backoff between attempts
-      for (let i = 0; i < delays.length; i++){
-        if (delays[i]) await new Promise(r => setTimeout(r, delays[i]));
-        try{
-          const result = await fetchCardImageOnce(cardName);
-          if (result) return result;
-        } catch(err){ /* try again with more backoff, or give up after the last attempt */ }
-      }
-      return null;
-    });
-  }
-
-  async function fetchCardImage(cardName){
-    if (!cardName) return null;
-    if (imageCache.has(cardName)) return imageCache.get(cardName);
-    const promise = fetchCardImageUncached(cardName);
-    imageCache.set(cardName, promise);
-    const result = await promise;
-    imageCache.set(cardName, result); // replace the in-flight promise with its resolved value
-    return result;
+  // ---- Card images (from TCGPlayer's CDN, via JustTCG's own data) ----
+  // JustTCG already returns a tcgplayerId with every card, for both
+  // English and Japanese results, and TCGPlayer's CDN serves product
+  // images directly from that ID — so no separate image lookup, no
+  // extra network round trip, and no more English-only gap. This
+  // replaced an entire retry/queue/cache system that existed only to
+  // work around the old (English-only, rate-limited) image source.
+  function tcgplayerImageUrl(tcgplayerId){
+    return tcgplayerId ? `https://tcgplayer-cdn.tcgplayer.com/product/${tcgplayerId}_in_200x200.jpg` : null;
   }
 
   // Extracts a plain number from strings like "9/18", "SWSH144", "041/146"
@@ -861,10 +813,10 @@
   }
 
   // ---- English / Japanese toggle ----
-  // JustTCG (price search) has real, separate data for both, so this
-  // actually filters the results list. The free card-image/suggestions
-  // service only covers English cards, so it stays quiet in Japanese
-  // mode instead of showing wrong-language guesses.
+  // JustTCG (price search + images) has real, separate data for both,
+  // so this actually filters the results list. Live suggestions for
+  // Japanese need the backend (see debounceSuggest below) since the
+  // free English-only suggestion service has no Japanese coverage.
   const langToggleEl = document.getElementById('lang-toggle');
   const langNoteEl = document.getElementById('lang-note');
   let searchLanguage = 'english';
@@ -875,8 +827,8 @@
     searchLanguage = btn.dataset.lang;
     [...langToggleEl.querySelectorAll('.lang-btn')].forEach(b => b.classList.toggle('active', b === btn));
     closeSuggestions();
-    langNoteEl.textContent = searchLanguage === 'japanese'
-      ? 'Live suggestions aren\'t available for Japanese cards yet, and result thumbnails will mostly show "no image" — but search results and prices are real. Type a name and hit Search.'
+    langNoteEl.textContent = (searchLanguage === 'japanese' && !USE_BACKEND)
+      ? 'Live suggestions aren\'t available for Japanese cards without the backend deployed — but search results and prices are real. Type a name and hit Search.'
       : '';
   });
 
@@ -888,7 +840,10 @@
 
   function debounceSuggest(){
     clearTimeout(debounceTimer);
-    if (searchLanguage === 'japanese'){
+    // Japanese suggestions need the backend (they're sourced from JustTCG,
+    // not the English-only card-suggestion service) — without a deployed
+    // backend, just stay quiet rather than show wrong-language guesses.
+    if (searchLanguage === 'japanese' && !USE_BACKEND){
       closeSuggestions();
       return;
     }
@@ -910,7 +865,7 @@
     try{
       let url;
       if (USE_BACKEND){
-        url = `/api/suggestions?term=${encodeURIComponent(term)}`;
+        url = `/api/suggestions?term=${encodeURIComponent(term)}&language=${searchLanguage}`;
       } else {
         // The term must be quoted before encoding — encodeURIComponent() turns
         // an unquoted "name:term*" into "name%3Aterm*", and the Pokemon TCG
@@ -964,8 +919,7 @@
         runSearch({
           name: card.name,
           setName: card.set?.name,
-          number: card.number,
-          image: card.images?.small || null
+          number: card.number
         });
       });
 
@@ -1070,9 +1024,24 @@
         div.className = 'result-card';
         allResultCards.push(div);
 
-        const thumb = document.createElement('div');
-        thumb.className = 'thumb empty';
-        thumb.textContent = '...';
+        let thumb;
+        const imgUrl = tcgplayerImageUrl(card.tcgplayerId);
+        if (imgUrl){
+          thumb = document.createElement('img');
+          thumb.className = 'thumb';
+          thumb.src = imgUrl;
+          thumb.alt = card.name || '';
+          thumb.onerror = () => {
+            const fallback = document.createElement('div');
+            fallback.className = 'thumb empty';
+            fallback.textContent = 'no image';
+            thumb.replaceWith(fallback);
+          };
+        } else {
+          thumb = document.createElement('div');
+          thumb.className = 'thumb empty';
+          thumb.textContent = 'no image';
+        }
         div.appendChild(thumb);
 
         const info = document.createElement('div');
@@ -1138,26 +1107,6 @@
         info.appendChild(variantList);
         div.appendChild(info);
         resultsEl.appendChild(div);
-
-        // If this is the exact card the user picked from the dropdown,
-        // we already have its image — no extra fetch needed.
-        if (picked && card === matchedCard && picked.image){
-          const img = document.createElement('img');
-          img.className = 'thumb';
-          img.src = picked.image;
-          img.alt = card.name || '';
-          thumb.replaceWith(img);
-          return;
-        }
-
-        fetchCardImage(card.name).then(imgUrl => {
-          if (!imgUrl) { thumb.textContent = 'no image'; return; }
-          const img = document.createElement('img');
-          img.className = 'thumb';
-          img.src = imgUrl;
-          img.alt = card.name || '';
-          thumb.replaceWith(img);
-        }).catch(() => { thumb.textContent = 'no image'; });
       });
 
     } catch(err){
