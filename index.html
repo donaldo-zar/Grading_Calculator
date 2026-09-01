@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Grade or Sell?</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #131319;
+    --panel: #1c1d26;
+    --panel-2: #22232f;
+    --line: #34364433;
+    --text: #f2f1ea;
+    --muted: #9096a8;
+    --holo-a: #2dd4bf;
+    --holo-b: #a78bfa;
+    --holo-c: #f472b6;
+    --slab-red: #dc4b4b;
+    --good: #4fd1a5;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, #1b1c26 0%, transparent 45%),
+      radial-gradient(circle at 85% 100%, #1a1b24 0%, transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px;
+  }
+  .wrap{ width:100%; max-width:640px; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px;height:8px;border-radius:2px;
+    background:linear-gradient(135deg,var(--holo-a),var(--holo-b),var(--holo-c));
+    display:inline-block;
+  }
+
+  h1{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:44px;
+    letter-spacing:.01em;
+    margin:0 0 6px 0;
+    line-height:1.05;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.5;
+    margin:0 0 24px 0;
+    max-width:50ch;
+  }
+
+  .slab{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px;
+    margin-bottom:20px;
+  }
+  .slab h2{
+    font-family:'Rajdhani',sans-serif;
+    font-size:18px;
+    margin:0 0 4px 0;
+  }
+  .slab .note{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.5;
+    margin:0 0 16px 0;
+  }
+
+  .search-row{
+    display:flex;
+    gap:10px;
+    position:relative;
+  }
+  .search-wrap{
+    position:relative;
+    flex:1;
+  }
+  .search-row input[type=text]{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    outline:none;
+  }
+  .search-row input[type=text]:focus{ border-color:var(--holo-b); }
+  .search-row button{
+    background:linear-gradient(120deg,var(--holo-a),var(--holo-b));
+    border:none;
+    border-radius:10px;
+    padding:0 20px;
+    color:#0d0e13;
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .search-row button:disabled{ opacity:.5; cursor:default; }
+
+  .suggestions{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    z-index:20;
+    max-height:340px;
+    overflow-y:auto;
+    display:none;
+    box-shadow:0 12px 24px rgba(0,0,0,.35);
+  }
+  .suggestions.open{ display:block; }
+  .suggestion-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 12px;
+    cursor:pointer;
+    border-bottom:1px solid var(--line);
+  }
+  .suggestion-item:last-child{ border-bottom:none; }
+  .suggestion-item:hover{ background:var(--panel); }
+  .suggestion-item img{
+    width:56px;
+    height:78px;
+    object-fit:cover;
+    border-radius:4px;
+    flex:none;
+    background:var(--panel);
+  }
+  .suggestion-item .s-name{ font-size:13.5px; font-weight:600; }
+  .suggestion-item .s-set{ font-size:11.5px; color:var(--muted); }
+  .suggestion-empty{
+    padding:10px 12px;
+    font-size:12.5px;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  .search-status{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:12px;
+    min-height:16px;
+  }
+  .search-status.error{ color:var(--slab-red); }
+
+  .results{
+    margin-top:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .result-card{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    gap:12px;
+  }
+  .result-card .thumb{
+    width:100px;
+    height:140px;
+    flex:none;
+    border-radius:6px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    object-fit:cover;
+  }
+  .result-card .thumb.empty{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--muted);
+    font-size:11px;
+    font-family:'JetBrains Mono',monospace;
+    text-align:center;
+    padding:6px;
+  }
+  .result-card .info{ flex:1; min-width:0; }
+  .result-card .name{
+    font-weight:600;
+    font-size:14.5px;
+    margin-bottom:2px;
+  }
+  .result-card .set{
+    color:var(--muted);
+    font-size:12.5px;
+    margin-bottom:10px;
+  }
+  .variant-list{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .variant-btn{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:6px 10px;
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .variant-btn:hover{ border-color:var(--holo-b); }
+  .variant-btn .price{ color:var(--good); font-weight:700; }
+  .variant-btn.selected{
+    border-color:var(--holo-b);
+    background:#262840;
+  }
+  .results-back{
+    display:none;
+    align-self:flex-start;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 14px;
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .results-back:hover{ border-color:var(--holo-b); }
+
+  .grade-select-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .grade-select-row select{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    outline:none;
+  }
+  .grade-select-row select:focus{ border-color:var(--holo-b); }
+
+  .grade-status{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:8px;
+    min-height:14px;
+  }
+  .grade-status.found{ color:var(--good); }
+
+  .fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:520px){ .fields{grid-template-columns:1fr;} }
+
+  label{
+    display:block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .input-row{
+    position:relative;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    transition:border-color .15s ease, background .3s ease;
+  }
+  .input-row:focus-within{ border-color:var(--holo-b); }
+  .input-row.filled{ background:#1c2f2a; }
+  .input-row .prefix{
+    position:absolute;
+    left:14px; top:50%; transform:translateY(-50%);
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:16px;
+    pointer-events:none;
+  }
+  input[type=number]{
+    width:100%;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;
+    font-weight:700;
+    padding-left:16px;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type=number]{ -moz-appearance:textfield; }
+
+  .divider{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin:24px 0 16px 0;
+  }
+  .divider::before,.divider::after{
+    content:"";
+    height:1px;
+    flex:1;
+    background:var(--line);
+  }
+
+  .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .row:last-of-type{ border-bottom:none; }
+  .row .k{ color:var(--muted); }
+  .row .v{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:15px;
+  }
+  .v.pos{ color:var(--good); }
+  .v.neg{ color:var(--slab-red); }
+
+  .verdict{
+    margin-top:22px;
+    border-radius:12px;
+    padding:22px 24px;
+    position:relative;
+    overflow:hidden;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    transition:border-color .3s ease;
+  }
+  .verdict.grade{
+    border:1px solid transparent;
+    background:
+      linear-gradient(var(--panel-2), var(--panel-2)) padding-box,
+      linear-gradient(120deg, var(--holo-a), var(--holo-b), var(--holo-c), var(--holo-a)) border-box;
+    background-size: 300% 300%, 300% 300%;
+    animation: shimmer 6s ease infinite;
+  }
+  @keyframes shimmer{
+    0%{ background-position: 0% 0%, 0% 50%; }
+    50%{ background-position: 0% 0%, 100% 50%; }
+    100%{ background-position: 0% 0%, 0% 50%; }
+  }
+  .verdict-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .verdict-title{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:28px;
+    margin:0 0 6px 0;
+  }
+  .verdict-title.grade{ color:var(--good); }
+  .verdict-title.sell{ color:var(--slab-red); }
+  .verdict-detail{
+    color:var(--muted);
+    font-size:13.5px;
+    line-height:1.5;
+  }
+
+  .formula{
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.7;
+  }
+  .formula strong{ color:var(--text); }
+  .formula code{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--panel-2);
+    padding:2px 6px;
+    border-radius:5px;
+    color:var(--text);
+  }
+
+  .setup-box{
+    border:1px dashed var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.6;
+    margin-top:14px;
+  }
+  .setup-box code{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--panel-2);
+    padding:2px 6px;
+    border-radius:5px;
+    color:var(--text);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Grading Decision Tool</div>
+  <h1>Grade it, or sell it raw?</h1>
+  <p class="sub">Search for a card to auto-fill its raw price. The graded price can auto-fill too (from real recent eBay sales) if you add a free PokemonPriceTracker key below — otherwise just enter your own estimate. The math accounts for the ~80% you actually net on a sale and the $150 grading fee.</p>
+
+  <div class="slab">
+    <h2>1. Look up a card</h2>
+    <p class="note">Search pulls live raw card prices from JustTCG. Graded prices, if you've added a free PokemonPriceTracker key, come from that card's recent eBay sales at your chosen grade — otherwise you'll enter that number yourself below.</p>
+    <div class="search-row">
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Start typing a card name..." autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+      <button id="search-btn">Search</button>
+    </div>
+    <div class="search-status" id="search-status"></div>
+    <div class="results" id="results"></div>
+
+    <!-- ============================================================
+         This copy of the file is set up for backend mode (see
+         USE_BACKEND below) — your JustTCG key belongs in Vercel's
+         Environment Variables instead of here, so this is left as a
+         placeholder on purpose and never uploaded to GitHub with your
+         real key in it. Only fill this in if you set USE_BACKEND back
+         to false and want this file to work standalone again.
+         ============================================================ -->
+    <script>const JUSTTCG_API_KEY = "PASTE_YOUR_API_KEY_HERE";</script>
+
+    <!-- ============================================================
+         PASTE YOUR POKEMONPRICETRACKER API KEY BELOW (between the quotes).
+         This powers the auto-filled "Potential graded price" field in
+         section 2 — it looks up real recent eBay sale prices for graded
+         cards (PSA/CGC/BGS/SGC). Get a free key (100 lookups/day, no
+         credit card needed) at https://www.pokemonpricetracker.com/api
+         Leave it as PASTE_YOUR_API_KEY_HERE to skip this feature —
+         everything else on the page still works fine without it.
+         Same heads-up as the JustTCG key above: visible in this file's
+         source, fine for personal use, move it server-side before
+         making this file public.
+         ============================================================ -->
+    <script>const PPT_API_KEY = "PASTE_YOUR_API_KEY_HERE";</script>
+
+    <!-- ============================================================
+         OPTIONAL: set this to true once you've deployed the small
+         backend server (the /api files that came with this page) to
+         Vercel and are viewing THIS page through its live Vercel URL
+         (something like your-project.vercel.app) rather than opening
+         it as a local file. When true, the page asks your own server
+         for card data/images/prices instead of asking JustTCG,
+         PokemonPriceTracker and the card-image service directly —
+         your server then caches the answers so repeat lookups are
+         instant, and the API keys above are no longer needed here at
+         all (they live on the server instead, as environment
+         variables, once deployed).
+         Leave this false to keep using the page exactly as before,
+         calling those services directly with the keys above.
+         ============================================================ -->
+    <script>const USE_BACKEND = true;</script>
+  </div>
+
+  <div class="slab">
+    <h2>2. Run the numbers</h2>
+    <div class="fields">
+      <div>
+        <label for="x">Raw price (x)</label>
+        <div class="input-row" id="x-row">
+          <span class="prefix">$</span>
+          <input type="number" id="x" value="189.50" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+      <div>
+        <label for="y" id="y-label">Potential PSA 10 price (y)</label>
+        <div class="grade-select-row">
+          <select id="grade-company">
+            <option value="PSA">PSA</option>
+            <option value="BGS">BGS</option>
+            <option value="CGC">CGC</option>
+            <option value="SGC">SGC</option>
+            <option value="TAG">TAG</option>
+          </select>
+          <select id="grade-value">
+            <option value="10">10</option>
+            <option value="9.5">9.5</option>
+            <option value="9">9</option>
+            <option value="8.5">8.5</option>
+            <option value="8">8</option>
+            <option value="7.5">7.5</option>
+            <option value="7">7</option>
+          </select>
+        </div>
+        <div class="input-row" id="y-row">
+          <span class="prefix">$</span>
+          <input type="number" id="y" value="600" step="0.01" inputmode="decimal">
+        </div>
+        <div class="grade-status" id="grade-status"></div>
+      </div>
+    </div>
+
+    <div class="divider">Breakdown</div>
+
+    <div class="row"><span class="k">Raw sale profit — 0.8 × x</span><span class="v" id="rp">–</span></div>
+    <div class="row"><span class="k">Grading path net profit — (0.8 × y) − 150</span><span class="v" id="gp">–</span></div>
+    <div class="row"><span class="k">Gap needed to justify grading — y − x must exceed $187.50</span><span class="v" id="gap">–</span></div>
+    <div class="row"><span class="k">This card's actual gap — y − x</span><span class="v" id="actualgap">–</span></div>
+
+    <div class="verdict" id="verdict">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-title" id="verdict-title">–</div>
+      <div class="verdict-detail" id="verdict-detail">–</div>
+    </div>
+  </div>
+
+  <div class="slab formula">
+    <strong style="color:var(--text); font-family:'Rajdhani',sans-serif; font-size:16px;">The formula</strong>
+    <p style="margin-top:10px;">
+      Raw Profit: <code>RP = 0.8x</code><br>
+      Grading Profit: <code>GP = 0.8y − 150</code><br>
+      Grade the card only if <code>GP &gt; RP</code>, which simplifies to <code>y − x &gt; 187.50</code>.
+    </p>
+    <div class="setup-box">
+      <strong style="color:var(--text)">First time using this?</strong><br>
+      1. Get a free API key at <code>justtcg.com/auth/signup</code> (no credit card needed).<br>
+      2. Open this file in a text editor, find the line that says
+      <code>PASTE_YOUR_API_KEY_HERE</code>, and put your key between the quotes.<br>
+      3. Save the file and reopen it in your browser. Search should now work.<br><br>
+      <strong style="color:var(--text)">Want the graded price to auto-fill too?</strong><br>
+      Get a second free key (no credit card) at
+      <code>pokemonpricetracker.com/api</code>, then paste it into the
+      other <code>PASTE_YOUR_API_KEY_HERE</code> spot in this file, next to
+      <code>PPT_API_KEY</code>. Without it, everything still works — you'll
+      just keep entering the graded price yourself.<br><br>
+      <strong style="color:var(--text)">Want it faster, with real graded-price auto-fill?</strong><br>
+      This page came with a small <code>backend</code> folder (a few
+      files that live on a free server instead of your computer). Deploy
+      it to Vercel, put your two API keys in Vercel's Environment
+      Variables settings instead of in this file, then set
+      <code>USE_BACKEND</code> to <code>true</code> near the
+      <code>PPT_API_KEY</code> line and view this page through your
+      live Vercel URL. See the setup guide for the exact steps.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const xInput = document.getElementById('x');
+  const yInput = document.getElementById('y');
+  const xRow = document.getElementById('x-row');
+  const yRow = document.getElementById('y-row');
+  const yLabel = document.getElementById('y-label');
+  const gradeCompany = document.getElementById('grade-company');
+  const gradeValue = document.getElementById('grade-value');
+  const gradeStatusEl = document.getElementById('grade-status');
+
+  function fmt(n){
+    const sign = n < 0 ? '−' : '';
+    return sign + '$' + Math.abs(n).toFixed(2);
+  }
+
+  function gradeLabel(){
+    return `${gradeCompany.value} ${gradeValue.value}`;
+  }
+
+  function updateYLabel(){
+    yLabel.textContent = `Potential ${gradeLabel()} price (y)`;
+  }
+  gradeCompany.addEventListener('change', () => { updateYLabel(); applyGradedPrice(); calculate(); });
+  gradeValue.addEventListener('change', () => { updateYLabel(); applyGradedPrice(); calculate(); });
+  updateYLabel();
+
+  // ---- Graded price auto-fill (PokemonPriceTracker — free key, optional) ----
+  // One lookup per selected card returns recent average eBay sale prices
+  // for every grade at once (PSA 10, PSA 9, CGC 9.5, ...), so switching
+  // the company/grade dropdown just re-reads this cached result instead
+  // of firing a new request each time.
+  //
+  // CONFIRMED (2026-09-01, tested with a real key): this API does not
+  // allow direct browser requests from any page other than its own site
+  // — the exact same request succeeds from pokemonpricetracker.com and
+  // fails everywhere else, including this file, regardless of key
+  // validity. Requests fail as a network error (not a normal HTTP
+  // error), so that's how "blocked" is distinguished from "no data"
+  // below. This can only be fixed with a small backend that calls
+  // PokemonPriceTracker on this page's behalf; a plain HTML file can't
+  // route around it.
+  let currentGradedSales = null; // salesByGrade object for the selected card, or null
+
+  function gradeKey(){
+    // Matches the API's real key format: lowercase company name + grade
+    // number, with the decimal point replaced by an underscore for half
+    // grades — e.g. "psa10", "cgc9_5", "bgs8_5" (NOT "cgc9.5").
+    return gradeCompany.value.toLowerCase() + gradeValue.value.replace('.', '_');
+  }
+
+  async function fetchGradedSales(cardName){
+    if (!cardName) return { status: 'no-key' };
+
+    if (USE_BACKEND){
+      // Server-to-server, so the cross-origin block below doesn't apply —
+      // this is the whole reason the backend exists.
+      try{
+        const res = await fetch(`/api/graded-price?name=${encodeURIComponent(cardName)}`);
+        if (!res.ok) return { status: 'error' };
+        return await res.json();
+      } catch(err){
+        return { status: 'error' };
+      }
+    }
+
+    if (!PPT_API_KEY || PPT_API_KEY === 'PASTE_YOUR_API_KEY_HERE') return { status: 'no-key' };
+    try{
+      const url = `https://www.pokemonpricetracker.com/api/v2/cards?search=${encodeURIComponent(cardName)}&includeEbay=true&limit=1`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${PPT_API_KEY}` } });
+      if (!res.ok) return { status: 'error' };
+      const data = await res.json();
+      const card = (data.data || [])[0];
+      return { status: 'ok', salesByGrade: card?.ebay?.salesByGrade || null };
+    } catch(err){
+      // A thrown TypeError here (rather than a normal !res.ok response)
+      // means the request never reached the server — almost always the
+      // cross-origin block described above, not "no data".
+      return { status: 'blocked' };
+    }
+  }
+
+  function applyGradedPrice(){
+    if (!USE_BACKEND && (!PPT_API_KEY || PPT_API_KEY === 'PASTE_YOUR_API_KEY_HERE')){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = '';
+      return;
+    }
+    if (!currentGradedSales){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = '';
+      return;
+    }
+    if (currentGradedSales.status === 'blocked'){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = "Auto-fill unavailable: PokemonPriceTracker blocks direct requests from this file (see comment above). Enter the graded price yourself for now.";
+      return;
+    }
+    if (currentGradedSales.status === 'no-key'){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = USE_BACKEND
+        ? 'Add PPT_API_KEY to your Vercel project\'s environment variables to enable this.'
+        : '';
+      return;
+    }
+    if (currentGradedSales.status === 'error'){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = 'Graded price lookup failed — double check your PokemonPriceTracker key.';
+      return;
+    }
+    const entry = (currentGradedSales.salesByGrade || {})[gradeKey()];
+    if (!entry){
+      gradeStatusEl.className = 'grade-status';
+      gradeStatusEl.textContent = `No recent eBay sales found for ${gradeLabel()}.`;
+      return;
+    }
+    yInput.value = Number(entry.averagePrice).toFixed(2);
+    calculate();
+    yRow.classList.add('filled');
+    setTimeout(() => yRow.classList.remove('filled'), 900);
+    gradeStatusEl.className = 'grade-status found';
+    gradeStatusEl.textContent = `Auto-filled from ${entry.count} recent eBay ${gradeLabel()} sale${entry.count === 1 ? '' : 's'} (avg).`;
+  }
+
+  function calculate(){
+    const x = parseFloat(xInput.value) || 0;
+    const y = parseFloat(yInput.value) || 0;
+
+    const rp = 0.8 * x;
+    const gp = (0.8 * y) - 150;
+    const actualGap = y - x;
+    const neededGap = 187.5;
+
+    document.getElementById('rp').textContent = fmt(rp);
+    document.getElementById('gp').textContent = fmt(gp);
+    document.getElementById('gap').textContent = fmt(neededGap);
+
+    const gapEl = document.getElementById('actualgap');
+    gapEl.textContent = fmt(actualGap);
+    gapEl.className = 'v ' + (actualGap > neededGap ? 'pos' : 'neg');
+
+    const verdictBox = document.getElementById('verdict');
+    const title = document.getElementById('verdict-title');
+    const detail = document.getElementById('verdict-detail');
+
+    const diff = gp - rp;
+
+    if (diff > 0){
+      verdictBox.className = 'verdict grade';
+      title.className = 'verdict-title grade';
+      title.textContent = 'GRADE IT';
+      detail.textContent = `Grading nets about ${fmt(gp)} vs. ${fmt(rp)} raw — an extra ${fmt(diff)} if it comes back a ${gradeLabel()}.`;
+    } else {
+      verdictBox.className = 'verdict';
+      title.className = 'verdict-title sell';
+      title.textContent = 'SELL RAW';
+      detail.textContent = `Selling raw nets about ${fmt(rp)}, which beats the ${fmt(gp)} grading would net by ${fmt(Math.abs(diff))} — grading isn't worth the risk here.`;
+    }
+  }
+
+  xInput.addEventListener('input', calculate);
+  yInput.addEventListener('input', calculate);
+  calculate();
+
+  // ---- Card images (Pokemon TCG API — free, no key needed) ----
+  // A tiny queue that fetches images one at a time with a gap between
+  // requests, instead of firing them all at once. Anonymous (no API key)
+  // requests to this API are rate-limited quite aggressively in practice
+  // — even a single request repeated back-to-back can 500 on the second
+  // try — so this spaces requests out and retries with backoff instead
+  // of giving up after one retry.
+  let imageQueue = Promise.resolve();
+  function queueImageFetch(fn){
+    const run = () => fn().finally(() => new Promise(r => setTimeout(r, 400)));
+    imageQueue = imageQueue.then(run, run);
+    return imageQueue;
+  }
+
+  // Multiple result rows are often just different printings of the same
+  // card name (e.g. 8 "Charizard" variants), which would otherwise fire
+  // identical requests and burn through the rate limit for no reason.
+  const imageCache = new Map();
+
+  async function fetchCardImageOnce(cardName){
+    if (USE_BACKEND){
+      const res = await fetch(`/api/card-image?name=${encodeURIComponent(cardName)}`);
+      if (!res.ok) throw new Error('bad status ' + res.status);
+      const data = await res.json();
+      return data.image || null;
+    }
+    const q = `name:"${cardName}"`;
+    const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=1`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('bad status ' + res.status);
+    const data = await res.json();
+    const first = (data.data || [])[0];
+    return first?.images?.small || null;
+  }
+
+  async function fetchCardImageUncached(cardName){
+    return queueImageFetch(async () => {
+      const delays = [0, 400, 900]; // increasing backoff between attempts
+      for (let i = 0; i < delays.length; i++){
+        if (delays[i]) await new Promise(r => setTimeout(r, delays[i]));
+        try{
+          const result = await fetchCardImageOnce(cardName);
+          if (result) return result;
+        } catch(err){ /* try again with more backoff, or give up after the last attempt */ }
+      }
+      return null;
+    });
+  }
+
+  async function fetchCardImage(cardName){
+    if (!cardName) return null;
+    if (imageCache.has(cardName)) return imageCache.get(cardName);
+    const promise = fetchCardImageUncached(cardName);
+    imageCache.set(cardName, promise);
+    const result = await promise;
+    imageCache.set(cardName, result); // replace the in-flight promise with its resolved value
+    return result;
+  }
+
+  // Extracts a plain number from strings like "9/18", "SWSH144", "041/146"
+  function extractNumber(str){
+    if (!str) return null;
+    const match = String(str).match(/(\d+)/);
+    return match ? String(parseInt(match[1], 10)) : null;
+  }
+
+  function slugify(str){
+    return (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  // ---- Live search suggestions (Pokemon TCG API) ----
+  const searchInput = document.getElementById('search-input');
+  const suggestionsEl = document.getElementById('suggestions');
+  let debounceTimer = null;
+  let latestSuggestionRequest = 0;
+
+  function debounceSuggest(){
+    clearTimeout(debounceTimer);
+    const term = searchInput.value.trim();
+    if (term.length < 3){
+      closeSuggestions();
+      return;
+    }
+    debounceTimer = setTimeout(() => fetchSuggestions(term), 300);
+  }
+
+  function closeSuggestions(){
+    suggestionsEl.classList.remove('open');
+    suggestionsEl.innerHTML = '';
+  }
+
+  async function fetchSuggestions(term){
+    const requestId = ++latestSuggestionRequest;
+    try{
+      let url;
+      if (USE_BACKEND){
+        url = `/api/suggestions?term=${encodeURIComponent(term)}`;
+      } else {
+        // The term must be quoted before encoding — encodeURIComponent() turns
+        // an unquoted "name:term*" into "name%3Aterm*", and the Pokemon TCG
+        // API's query parser 500s on that. Quoting survives encoding fine.
+        const q = `name:"${term}*"`;
+        url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=8&orderBy=name`;
+      }
+      const res = await fetch(url);
+      if (requestId !== latestSuggestionRequest) return; // a newer keystroke has already fired
+      if (!res.ok) { closeSuggestions(); return; }
+      const data = await res.json();
+      renderSuggestions(data.data || []);
+    } catch(err){
+      if (requestId === latestSuggestionRequest) closeSuggestions();
+    }
+  }
+
+  function renderSuggestions(cards){
+    suggestionsEl.innerHTML = '';
+    if (cards.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'suggestion-empty';
+      empty.textContent = 'No matching cards found.';
+      suggestionsEl.appendChild(empty);
+      suggestionsEl.classList.add('open');
+      return;
+    }
+    cards.forEach(card => {
+      const item = document.createElement('div');
+      item.className = 'suggestion-item';
+
+      const img = document.createElement('img');
+      img.src = card.images?.small || '';
+      img.alt = '';
+      item.appendChild(img);
+
+      const info = document.createElement('div');
+      const nameEl = document.createElement('div');
+      nameEl.className = 's-name';
+      nameEl.textContent = card.name;
+      const setEl = document.createElement('div');
+      setEl.className = 's-set';
+      setEl.textContent = [card.set?.name, card.number].filter(Boolean).join(' · ');
+      info.appendChild(nameEl);
+      info.appendChild(setEl);
+      item.appendChild(info);
+
+      item.addEventListener('click', () => {
+        closeSuggestions();
+        searchInput.value = card.name;
+        runSearch({
+          name: card.name,
+          setName: card.set?.name,
+          number: card.number,
+          image: card.images?.small || null
+        });
+      });
+
+      suggestionsEl.appendChild(item);
+    });
+    suggestionsEl.classList.add('open');
+  }
+
+  searchInput.addEventListener('input', debounceSuggest);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrap')) closeSuggestions();
+  });
+
+  // ---- Card price search (JustTCG) ----
+  const searchBtn = document.getElementById('search-btn');
+  const statusEl = document.getElementById('search-status');
+  const resultsEl = document.getElementById('results');
+
+  // `picked` is optional — present when the user selected a suggestion
+  // from the dropdown, giving us an exact name/set/number/image to
+  // match against, instead of a plain freeform search.
+  async function runSearch(picked){
+    const q = (picked?.name || searchInput.value).trim();
+    if (!q) return;
+    closeSuggestions();
+
+    if (!USE_BACKEND && (!JUSTTCG_API_KEY || JUSTTCG_API_KEY === 'PASTE_YOUR_API_KEY_HERE')){
+      statusEl.className = 'search-status error';
+      statusEl.textContent = "No API key set yet — see the setup box below to add your free JustTCG key.";
+      return;
+    }
+
+    statusEl.className = 'search-status';
+    statusEl.textContent = 'Searching...';
+    resultsEl.innerHTML = '';
+    searchBtn.disabled = true;
+
+    try{
+      let res;
+      if (USE_BACKEND){
+        res = await fetch(`/api/cards?q=${encodeURIComponent(q)}`);
+      } else {
+        const url = `https://api.justtcg.com/v1/cards?q=${encodeURIComponent(q)}&game=pokemon&limit=8`;
+        res = await fetch(url, { headers: { 'x-api-key': JUSTTCG_API_KEY } });
+      }
+
+      if (!res.ok){
+        throw new Error(`Request failed (status ${res.status}). ${USE_BACKEND ? 'Check your server\'s JUSTTCG_API_KEY environment variable.' : 'Double-check your API key.'}`);
+      }
+
+      const data = await res.json();
+      let cards = data.data || [];
+
+      if (cards.length === 0){
+        statusEl.textContent = 'No cards found — try a different search.';
+        return;
+      }
+
+      // If a specific card was picked from the dropdown, try to find the
+      // matching printing by number, and put it first.
+      let matchedCard = null;
+      if (picked){
+        const pickedNum = extractNumber(picked.number);
+        const pickedSetSlug = slugify(picked.setName);
+        matchedCard = cards.find(c => {
+          const numMatches = pickedNum && extractNumber(c.number) === pickedNum;
+          const setMatches = pickedSetSlug && slugify(c.set).includes(pickedSetSlug.slice(0, 6));
+          return numMatches && (setMatches || !c.set);
+        }) || cards.find(c => extractNumber(c.number) === pickedNum);
+
+        if (matchedCard){
+          cards = [matchedCard, ...cards.filter(c => c !== matchedCard)];
+        }
+      }
+
+      statusEl.textContent = picked
+        ? `Showing prices for ${picked.name}${matchedCard ? '' : ' (closest matches below)'}. Click a price to use it as the raw price.`
+        : `Found ${cards.length} card${cards.length === 1 ? '' : 's'}. Click a price to use it as the raw price.`;
+
+      // Picking a condition on any card collapses the whole results list
+      // down to just that card + that condition. This one control brings
+      // back every card and every condition in case of a misclick.
+      const allResultCards = [];
+      const cardResetFns = [];
+      const resultsBackBtn = document.createElement('button');
+      resultsBackBtn.type = 'button';
+      resultsBackBtn.className = 'results-back';
+      resultsBackBtn.textContent = '‹ Back to all results';
+      resultsBackBtn.addEventListener('click', () => {
+        allResultCards.forEach(d => { d.style.display = ''; });
+        cardResetFns.forEach(fn => fn());
+        resultsBackBtn.style.display = 'none';
+        currentGradedSales = null;
+        gradeStatusEl.className = 'grade-status';
+        gradeStatusEl.textContent = '';
+      });
+      resultsEl.appendChild(resultsBackBtn);
+
+      cards.forEach((card, idx) => {
+        const div = document.createElement('div');
+        div.className = 'result-card';
+        allResultCards.push(div);
+
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb empty';
+        thumb.textContent = '...';
+        div.appendChild(thumb);
+
+        const info = document.createElement('div');
+        info.className = 'info';
+
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = (card.name || 'Unknown card') + (card === matchedCard ? ' ✓' : '');
+        info.appendChild(name);
+
+        const setLine = document.createElement('div');
+        setLine.className = 'set';
+        setLine.textContent = [card.set, card.number].filter(Boolean).join(' · ') || '';
+        info.appendChild(setLine);
+
+        const variantList = document.createElement('div');
+        variantList.className = 'variant-list';
+
+        const variantButtons = [];
+        cardResetFns.push(() => {
+          variantButtons.forEach(other => {
+            other.style.display = '';
+            other.classList.remove('selected');
+          });
+        });
+
+        (card.variants || []).slice(0, 6).forEach(v => {
+          if (v.price == null) return;
+          const btn = document.createElement('button');
+          btn.className = 'variant-btn';
+          const label = [v.condition, v.printing].filter(Boolean).join(' · ') || 'Variant';
+          btn.innerHTML = `${label} — <span class="price">$${Number(v.price).toFixed(2)}</span>`;
+          btn.addEventListener('click', () => {
+            xInput.value = Number(v.price).toFixed(2);
+            calculate();
+            xRow.classList.add('filled');
+            setTimeout(() => xRow.classList.remove('filled'), 900);
+
+            // Collapse this card down to just the chosen condition...
+            variantButtons.forEach(other => {
+              other.style.display = (other === btn) ? '' : 'none';
+            });
+            btn.classList.add('selected');
+
+            // ...and hide every other card in the results list.
+            allResultCards.forEach(otherDiv => {
+              if (otherDiv !== div) otherDiv.style.display = 'none';
+            });
+            resultsBackBtn.style.display = 'inline-block';
+
+            // Look up graded sale prices for this card (if a key is set)
+            // and fill in the graded price field once they're back.
+            currentGradedSales = null;
+            gradeStatusEl.className = 'grade-status';
+            gradeStatusEl.textContent = PPT_API_KEY && PPT_API_KEY !== 'PASTE_YOUR_API_KEY_HERE'
+              ? 'Looking up graded sale prices...'
+              : '';
+            fetchGradedSales(card.name).then(result => {
+              currentGradedSales = result;
+              applyGradedPrice();
+            });
+          });
+          variantButtons.push(btn);
+          variantList.appendChild(btn);
+        });
+
+        info.appendChild(variantList);
+        div.appendChild(info);
+        resultsEl.appendChild(div);
+
+        // If this is the exact card the user picked from the dropdown,
+        // we already have its image — no extra fetch needed.
+        if (picked && card === matchedCard && picked.image){
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = picked.image;
+          img.alt = card.name || '';
+          thumb.replaceWith(img);
+          return;
+        }
+
+        fetchCardImage(card.name).then(imgUrl => {
+          if (!imgUrl) { thumb.textContent = 'no image'; return; }
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = imgUrl;
+          img.alt = card.name || '';
+          thumb.replaceWith(img);
+        }).catch(() => { thumb.textContent = 'no image'; });
+      });
+
+    } catch(err){
+      statusEl.className = 'search-status error';
+      statusEl.textContent = err.message || 'Something went wrong with the search.';
+    } finally {
+      searchBtn.disabled = false;
+    }
+  }
+
+  searchBtn.addEventListener('click', () => runSearch());
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runSearch();
+  });
+</script>
+
+</body>
+</html>
